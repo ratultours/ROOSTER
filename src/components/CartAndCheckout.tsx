@@ -6,13 +6,14 @@ export function CartAndCheckout() {
   const { 
     cart, setCart, isCartOpen, setIsCartOpen, 
     isCheckoutOpen, setIsCheckoutOpen, isSuccessOpen, setIsSuccessOpen,
-    currentUser, users, getOrders, setOrders, getStats, setStats, showToast 
+    currentUser, users, saveUsersState, getOrders, setOrders, getStats, setStats, showToast 
   } = useAppContext();
 
   const [checkoutForm, setCheckoutForm] = useState({
     name: '', phone: '', email: '', address: '', note: ''
   });
   const [successOrderId, setSuccessOrderId] = useState('');
+  const [isConfirmed, setIsConfirmed] = useState(false);
 
   const totalQty = Object.values(cart).reduce((a: any, b: any) => a + b, 0) as number;
   const subtotal = Object.entries(cart).reduce((sum, [id, qty]) => {
@@ -59,6 +60,7 @@ export function CartAndCheckout() {
     if (!phone || !/^01[3-9]\d{8}$/.test(phone)) { showToast('⚠️ Please enter a valid BD phone number!'); return; }
     const addrWords = address.split(/[\s,]+/).filter(w => w.length > 1);
     if (address.length < 30 || addrWords.length < 5) { showToast('⚠️ Please enter a complete address!'); return; }
+    if (!isConfirmed) { showToast('⚠️ Please confirm your order details!'); return; }
 
     const orderId = 'ROS-' + String(Math.floor(1000 + Math.random() * 9000));
     const orderItems = Object.entries(cart).filter(([_, q]: [any, any]) => q > 0).map(([id, qty]) => {
@@ -124,20 +126,20 @@ export function CartAndCheckout() {
       <div className={`cart-drawer ${isCartOpen ? 'open' : ''}`}>
         <div className="cart-handle"></div>
         <div className="cart-header">
-          <div className="cart-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingRight: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <ShoppingBag size={22} color="#22a44e" strokeWidth={2.2} /> YOUR CART
-            </div>
+          <div className="cart-title">
+            <ShoppingBag size={22} color="#22a44e" strokeWidth={2.2} /> YOUR CART
+          </div>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             {totalQty > 0 && (
               <button 
-                onClick={() => setCart({})} 
-                style={{ fontSize: '11px', fontWeight: 800, color: '#c0150a', background: 'rgba(232,35,10,0.1)', border: '1px solid rgba(232,35,10,0.2)', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                onClick={() => setCart({})}
+                style={{ fontSize: '11px', fontWeight: 800, color: '#c0150a', background: 'rgba(232,35,10,0.1)', border: '1px solid rgba(232,35,10,0.2)', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}
               >
-                ✕ CLEAR CART
+                CLEAR
               </button>
             )}
+            <button className="cart-close" onClick={() => setIsCartOpen(false)}>✕</button>
           </div>
-          <button className="cart-close" onClick={() => setIsCartOpen(false)}>✕</button>
         </div>
         
         <div className="cart-items">
@@ -204,6 +206,10 @@ export function CartAndCheckout() {
           
           <div className="order-summary-mini">
             <div className="osm-title">Order Summary</div>
+            <div style={{ paddingBottom: '8px', borderBottom: '1px solid rgba(30,35,50,0.1)', marginBottom: '8px', fontSize: '13px', color: 'rgba(30,35,50,0.7)', lineHeight: 1.4 }}>
+              <strong>Delivering to:</strong> {checkoutForm.name ? checkoutForm.name + " · " : ""}{checkoutForm.phone}<br/>
+              {checkoutForm.address ? checkoutForm.address : <span style={{ color: "rgba(232,35,10,0.6)" }}>Please enter delivery address</span>}
+            </div>
             <div>
               {Object.entries(cart).map(([id, qty]) => {
                 const p = products.find(x => x.id === Number(id));
@@ -214,6 +220,11 @@ export function CartAndCheckout() {
             <div className="osm-row"><span>Delivery Charge</span><span>৳{DELIVERY_CHARGE}</span></div>
             <div className="osm-row total"><span>Total</span><span>৳{total}</span></div>
           </div>
+          
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', cursor: 'pointer', fontSize: '13px', color: 'rgba(30,35,50,0.8)', fontWeight: 600 }}>
+            <input type="checkbox" checked={isConfirmed} onChange={(e) => setIsConfirmed(e.target.checked)} style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--red)' }} />
+            I confirm the order details and delivery address
+          </label>
           
           <button className="place-order-btn" onClick={handlePlaceOrder}>Place Order</button>
           <button className="modal-back" onClick={() => { setIsCheckoutOpen(false); setIsCartOpen(true); }}>← Back to Cart</button>

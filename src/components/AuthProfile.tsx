@@ -1,12 +1,12 @@
 import React, { useState, useRef } from 'react';
-import { User, Lock, Mail, Phone, LogOut, Camera, Calendar, ShoppingBag, MapPin, CreditCard, RotateCcw } from 'lucide-react';
+import { User, Lock, Mail, Phone, LogOut, Camera, Calendar, ShoppingBag, MapPin, CreditCard, RotateCcw, Clock, CheckCircle2, Truck, Home, ShoppingCart } from 'lucide-react';
 import { useAppContext, DELIVERY_CHARGE } from '../AppContext';
 
 export function AuthProfile() {
   const { 
     currentUser, users, saveUsersState, saveSessionState, clearSessionState,
     isAuthOpen, setIsAuthOpen, showToast, getStats, getOrders, setOrders, accTab, setAccTab,
-    setCart, setIsCartOpen
+    cart, setCart, setCardQty, setIsCartOpen
   } = useAppContext();
 
   const [authTab, setAuthTab] = useState<'login'|'signup'>('login');
@@ -152,6 +152,24 @@ export function AuthProfile() {
     showToast('✅ Address saved!');
   };
 
+  const handleReorder = (e: React.MouseEvent, order: any) => {
+    if (e) e.stopPropagation();
+    const newCart = { ...cart };
+    order.items.forEach((item: any) => {
+      newCart[item.id] = (newCart[item.id] || 0) + item.qty;
+    });
+    setCart(newCart);
+    
+    let totalQ = 0;
+    Object.values(newCart).forEach((q: any) => { if (q > 0) totalQ += q; });
+    setCardQty(totalQ);
+    
+    showToast('Items added to cart!');
+    setIsAuthOpen(false);
+    setIsCartOpen(true);
+    setOrderDetailId(null);
+  };
+
   const requestEmailOTP = () => {
     const email = editForm.email.trim().toLowerCase();
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('⚠️ Enter a valid email address'); return; }
@@ -218,10 +236,31 @@ export function AuthProfile() {
 
           {!currentUser ? (
             <>
-              <div className="auth-tabs">
-                <div className={`auth-tabs-slider ${authTab === 'signup' ? 'to-signup' : ''}`}></div>
-                <button className={`auth-tab-btn ${authTab === 'login' ? 'active' : ''}`} onClick={() => {setAuthTab('login'); setAuthMsg({text:'',type:''})}}>Login</button>
-                <button className={`auth-tab-btn ${authTab === 'signup' ? 'active' : ''}`} onClick={() => {setAuthTab('signup'); setAuthMsg({text:'',type:''})}}>Sign Up</button>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
+                <span style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(30,35,50,0.6)', marginRight: '10px' }}>
+                  {authTab === 'login' ? 'Need an account?' : 'Already have an account?'}
+                </span>
+                <button 
+                  onClick={() => {
+                    setAuthTab(authTab === 'login' ? 'signup' : 'login');
+                    setAuthMsg({ text: '', type: '' });
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '20px',
+                    border: '1.5px solid var(--red)',
+                    background: 'var(--red)',
+                    color: '#fff',
+                    fontFamily: "'Rubik', sans-serif",
+                    fontWeight: 800,
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 2px 8px rgba(232,35,10,0.2)'
+                  }}
+                >
+                  Switch to {authTab === 'login' ? 'Sign Up' : 'Login'}
+                </button>
               </div>
 
               {authMsg.text && (
@@ -334,7 +373,15 @@ export function AuthProfile() {
                         </div>
                         <div className="order-item-date">{o.date}</div>
                         <div className="order-item-summary">{o.items.map((i: any) => `${i.name}×${i.qty}`).join(', ')}</div>
-                        <div className="order-item-total">Total: ৳{o.total}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+                          <div className="order-item-total">Total: ৳{o.total}</div>
+                          <button 
+                            className="reorder-btn" 
+                            onClick={(e) => handleReorder(e, o)}
+                          >
+                            <ShoppingCart size={12} /> Reorder
+                          </button>
+                        </div>
                       </div>
                     ))
                   )}
@@ -391,7 +438,7 @@ export function AuthProfile() {
                 <div className="account-section active">
                   <div style={{ background:'rgba(255,255,255,0.40)', border:'1px solid rgba(255,255,255,0.65)', borderRadius:'10px', padding:'20px 16px', textAlign:'center', marginBottom:'14px' }}>
                     <div style={{ fontSize:'40px', marginBottom:'12px' }}>🚪</div>
-                    <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:'20px', color:'#1a1d25', letterSpacing:'1px', marginBottom:'6px' }}>Ready to Leave?</div>
+                    <div style={{ fontFamily:"'Rubik', sans-serif", fontSize:'20px', color:'#1a1d25', letterSpacing:'1px', marginBottom:'6px' }}>Ready to Leave?</div>
                     <div style={{ fontSize:'13px', color:'rgba(30,35,50,0.50)', fontWeight:600, lineHeight:1.5 }}>You'll need to log in again to place orders and view your history.</div>
                   </div>
                   <button className="section-logout-btn" onClick={doLogout} style={{ marginTop:0 }}><LogOut size={14} /> Confirm Logout</button>
@@ -420,25 +467,42 @@ export function AuthProfile() {
                   </span>
                 </div>
                 
-                {selectedOrder.status !== 'cancelled' && (
-                  <div className="order-tracker">
-                    <div className={`track-step ${['pending', 'confirmed', 'out_for_delivery', 'delivered'].includes(selectedOrder.status) ? 'active' : ''}`}>
-                      1<div className="track-label">Pending</div>
+                {selectedOrder.status !== 'cancelled' && (() => {
+                  const s = selectedOrder.status;
+                  const isActive = (levels: string[]) => levels.includes(s) ? 'active' : '';
+                  return (
+                    <div className="order-tracker-vertical">
+                      <div className={`vt-node ${isActive(['pending', 'confirmed', 'out_for_delivery', 'delivered'])}`}>
+                        <div className="vt-icon"><Clock size={16} /></div>
+                        <div className="vt-content">
+                          <div className="vt-title">Order Placed</div>
+                          <div className="vt-desc">We have received your order and are processing it.</div>
+                        </div>
+                      </div>
+                      <div className={`vt-node ${isActive(['confirmed', 'out_for_delivery', 'delivered'])}`}>
+                        <div className="vt-icon"><CheckCircle2 size={16} /></div>
+                        <div className="vt-content">
+                          <div className="vt-title">Order Confirmed</div>
+                          <div className="vt-desc">Your items have been prepared and packed.</div>
+                        </div>
+                      </div>
+                      <div className={`vt-node ${isActive(['out_for_delivery', 'delivered'])}`}>
+                        <div className="vt-icon"><Truck size={16} /></div>
+                        <div className="vt-content">
+                          <div className="vt-title">Out for Delivery</div>
+                          <div className="vt-desc">Our delivery partner is on the way to you.</div>
+                        </div>
+                      </div>
+                      <div className={`vt-node ${isActive(['delivered'])}`}>
+                        <div className="vt-icon"><Home size={16} /></div>
+                        <div className="vt-content">
+                          <div className="vt-title">Delivered</div>
+                          <div className="vt-desc">Order has been successfully hand-delivered.</div>
+                        </div>
+                      </div>
                     </div>
-                    <div className={`track-line ${['confirmed', 'out_for_delivery', 'delivered'].includes(selectedOrder.status) ? 'active' : ''}`}></div>
-                    <div className={`track-step ${['confirmed', 'out_for_delivery', 'delivered'].includes(selectedOrder.status) ? 'active' : ''}`}>
-                      2<div className="track-label">Confirmed</div>
-                    </div>
-                    <div className={`track-line ${['out_for_delivery', 'delivered'].includes(selectedOrder.status) ? 'active' : ''}`}></div>
-                    <div className={`track-step ${['out_for_delivery', 'delivered'].includes(selectedOrder.status) ? 'active' : ''}`}>
-                      3<div className="track-label">Out for Del.</div>
-                    </div>
-                    <div className={`track-line ${['delivered'].includes(selectedOrder.status) ? 'active' : ''}`}></div>
-                    <div className={`track-step ${['delivered'].includes(selectedOrder.status) ? 'active' : ''}`}>
-                      4<div className="track-label">Delivered</div>
-                    </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
               <div className="detail-section" style={{ background: '#fff', border: '1px dashed rgba(30,35,50,0.3)' }}>
                 <div className="detail-section-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><ShoppingBag size={13} /> Items Ordered</div>
@@ -469,19 +533,10 @@ export function AuthProfile() {
                 <div className="detail-row"><span>Method</span><span>Cash on Delivery</span></div>
               </div>
               <button 
-                className="section-logout-btn" 
-                style={{ background: 'rgba(34,164,78,0.1)', color: '#156632', borderColor: 'rgba(34,164,78,0.3)', marginTop: '20px' }}
-                onClick={() => {
-                  const newCart: Record<number, number> = {};
-                  selectedOrder.items.forEach((item: any) => { newCart[item.id] = item.qty; });
-                  setCart(newCart);
-                  setOrderDetailId(null);
-                  setIsAuthOpen(false);
-                  setIsCartOpen(true);
-                  showToast('🛒 Cart updated with previous order!');
-                }}
+                className="reorder-btn-lg" 
+                onClick={(e) => handleReorder(e, selectedOrder)}
               >
-                <RotateCcw size={14} /> Reorder Again
+                <RotateCcw size={16} /> Reorder Full Order
               </button>
               {selectedOrder.status === 'pending' && (Date.now() - (selectedOrder.timestamp || 0) < 15000) && (
                 <button 

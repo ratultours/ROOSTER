@@ -188,7 +188,7 @@ export function Products() {
               <div className="badge-discount" style={{ top: '16px', left: '16px' }}>-{Math.round(((quickViewProduct.oldPrice - quickViewProduct.price) / quickViewProduct.oldPrice) * 100)}%</div>
             </div>
             <div className="product-category" style={{ fontSize: '12px' }}>{getCatLabel(quickViewProduct.category).replace(/[^\w\s]/gi, '').trim()}</div>
-            <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: '24px', fontWeight: 800, color: '#1a1d25', marginBottom: '8px', lineHeight: 1.2 }}>{quickViewProduct.name}</h3>
+            <h3 style={{ fontFamily: "'Rubik', sans-serif", fontSize: '24px', fontWeight: 800, color: '#1a1d25', marginBottom: '8px', lineHeight: 1.2 }}>{quickViewProduct.name}</h3>
             <p style={{ fontSize: '13px', color: 'rgba(30,35,50,0.6)', marginBottom: '20px', lineHeight: 1.5 }}>
               A delicious portion of {quickViewProduct.name.toLowerCase()}, prepared fresh and served hot.
             </p>

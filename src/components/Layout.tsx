@@ -22,9 +22,6 @@ export function Header() {
         <div className="header-actions">
           {currentUser ? (
             <>
-              <button className="auth-btn logged-in" style={{ marginRight: '8px', padding: '0 8px' }} onClick={() => { setAccTab('orders'); setIsAuthOpen(true); }} title="Order History">
-                <History size={16} strokeWidth={2.2} />
-              </button>
               <button className="auth-btn logged-in" onClick={() => setIsAuthOpen(true)}>
                 {u?.avatar ? (
                   <img className="header-profile-photo" src={u.avatar} alt="Profile" />
@@ -38,12 +35,8 @@ export function Header() {
               <User size={16} strokeWidth={2.2} />
             </button>
           )}
-
           <button className="cart-btn" onClick={() => setIsCartOpen(true)}>
-            <ShoppingBag size={15} strokeWidth={2.2} />
-            <span id="header-cart-count" style={{ fontSize: '12px', fontWeight: 800 }}>
-              {totalQty > 0 ? totalQty : 'Cart'}
-            </span>
+            <ShoppingBag size={18} strokeWidth={2.2} />
             <span className={`cart-badge ${totalQty > 0 ? 'show' : ''}`} id="cart-badge">
               {totalQty}
             </span>
@@ -57,13 +50,11 @@ export function Header() {
 export function Hero() {
   return (
     <div className="hero">
-      <div className="hero-tag">✨ Meet Our Signatures</div>
       <h1>
         <span className="strike">Not a Snack</span>
         <span className="dash"> - </span>
         <span className="statement">A Statement</span>
       </h1>
-      <p>Meatbox · Fries · Dumpling</p>
       <div className="hero-address">📍 259/2, West Monipur, Mirpur-2, Dhaka</div>
     </div>
   );
