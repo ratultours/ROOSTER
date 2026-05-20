@@ -117,10 +117,29 @@ export function Footer() {
 
 export function Toast() {
   const { toast } = useAppContext();
+  
+  // Decide icon based on message content
+  let icon = '🔔';
+  let title = 'Notification';
+  if (toast.msg.toLowerCase().includes('confirmed')) {
+    icon = '✅'; title = 'Order Update';
+  } else if (toast.msg.toLowerCase().includes('out for delivery')) {
+    icon = '🛵'; title = 'Delivery Updates';
+  } else if (toast.msg.toLowerCase().includes('delivered')) {
+    icon = '🎉'; title = 'Order Complete';
+  } else if (toast.msg.toLowerCase().includes('success') || toast.msg.toLowerCase().includes('added')) {
+    icon = '✅'; title = 'Success';
+  } else if (toast.msg.toLowerCase().includes('error') || toast.msg.toLowerCase().includes('failed') || toast.msg.toLowerCase().includes('cannot')) {
+    icon = '⚠️'; title = 'Alert';
+  }
+
   return (
     <div className={`toast ${toast.show ? 'show' : ''}`} id="toast">
-      <span className="toast-icon">✅</span>
-      <span id="toast-msg">{toast.msg}</span>
+      <div className="toast-icon">{icon}</div>
+      <div className="toast-content">
+        <div className="toast-title">Rooster • {title}</div>
+        <div id="toast-msg">{toast.msg}</div>
+      </div>
     </div>
   );
 }

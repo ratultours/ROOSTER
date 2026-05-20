@@ -16,6 +16,7 @@ export function Products() {
 
   const [animatingCard, setAnimatingCard] = React.useState<number | null>(null);
   const [addedItem, setAddedItem] = React.useState<number | null>(null);
+  const [quickViewProduct, setQuickViewProduct] = React.useState<any>(null);
 
   const toggleFavorite = (id: number) => {
     if (!currentUser) {
@@ -141,6 +142,12 @@ export function Products() {
                     >
                       <Heart size={16} fill={currentUser && users[currentUser.email]?.favorites?.includes(p.id) ? "var(--red)" : "none"} color={currentUser && users[currentUser.email]?.favorites?.includes(p.id) ? "var(--red)" : "#1a1d25"} />
                     </button>
+                    <button 
+                      className="quick-view-btn"
+                      onClick={(e) => { e.stopPropagation(); setQuickViewProduct(p); }}
+                    >
+                      Quick View
+                    </button>
                   </div>
                   <div className="product-body">
                     <div className="product-category">{catLabel}</div>
@@ -169,6 +176,39 @@ export function Products() {
             })
           )}
         </div>
+      </div>
+
+      {/* Quick View Modal */}
+      <div className={`modal-overlay ${quickViewProduct ? 'open' : ''}`} onClick={(e) => { if (e.target === e.currentTarget) setQuickViewProduct(null); }}>
+        {quickViewProduct && (
+          <div className="modal quick-view-modal">
+            <button className="detail-close" style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 10 }} onClick={() => setQuickViewProduct(null)}>✕</button>
+            <div className="qv-img-wrap" style={{ margin: '-24px -22px 20px', position: 'relative' }}>
+              <img src={quickViewProduct.img} alt={quickViewProduct.name} style={{ width: '100%', height: '240px', objectFit: 'cover', display: 'block', borderRadius: '5px 5px 0 0' }} />
+              <div className="badge-discount" style={{ top: '16px', left: '16px' }}>-{Math.round(((quickViewProduct.oldPrice - quickViewProduct.price) / quickViewProduct.oldPrice) * 100)}%</div>
+            </div>
+            <div className="product-category" style={{ fontSize: '12px' }}>{getCatLabel(quickViewProduct.category).replace(/[^\w\s]/gi, '').trim()}</div>
+            <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: '24px', fontWeight: 800, color: '#1a1d25', marginBottom: '8px', lineHeight: 1.2 }}>{quickViewProduct.name}</h3>
+            <p style={{ fontSize: '13px', color: 'rgba(30,35,50,0.6)', marginBottom: '20px', lineHeight: 1.5 }}>
+              A delicious portion of {quickViewProduct.name.toLowerCase()}, prepared fresh and served hot.
+            </p>
+            <div className="product-price" style={{ fontSize: '22px', marginBottom: '20px', fontWeight: 900, color: '#1a1d25' }}>
+              ৳{quickViewProduct.price} <span className="product-old-price" style={{ fontSize: '14px', textDecoration: 'line-through', color: 'rgba(30,35,50,0.4)', marginLeft: '6px' }}>৳{quickViewProduct.oldPrice}</span>
+            </div>
+            <div className="qty-control" style={{ maxWidth: '140px', marginBottom: '20px', padding: '6px', background: 'rgba(255,255,255,0.4)', borderRadius: '8px', display: 'flex', alignItems: 'center' }}>
+              <button className="qty-btn" style={{ width: '36px', height: '36px', fontSize: '20px' }} onClick={() => handleAddQty(quickViewProduct.id, -1)}>−</button>
+              <div className="qty-num" style={{ flex: 1, textAlign: 'center', fontSize: '18px' }}>{cardQty[quickViewProduct.id] || 1}</div>
+              <button className="qty-btn" style={{ width: '36px', height: '36px', fontSize: '20px' }} onClick={() => handleAddQty(quickViewProduct.id, 1)}>+</button>
+            </div>
+            <button className={`add-btn ${addedItem === quickViewProduct.id ? 'added-success' : ''}`} style={{ width: '100%', padding: '16px', fontSize: '15px' }} onClick={() => handleAddToCart(quickViewProduct.id)}>
+              {addedItem === quickViewProduct.id ? (
+                <>✓ Added to Cart</>
+              ) : (
+                <><ShoppingBag size={18} style={{ marginRight: '6px' }} /> Add to Cart — ৳{quickViewProduct.price * (cardQty[quickViewProduct.id] || 1)}</>
+              )}
+            </button>
+          </div>
+        )}
       </div>
     </>
   );

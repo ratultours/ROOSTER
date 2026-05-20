@@ -5,7 +5,7 @@ import { useAppContext, DELIVERY_CHARGE } from '../AppContext';
 export function AuthProfile() {
   const { 
     currentUser, users, saveUsersState, saveSessionState, clearSessionState,
-    isAuthOpen, setIsAuthOpen, showToast, getStats, getOrders, accTab, setAccTab,
+    isAuthOpen, setIsAuthOpen, showToast, getStats, getOrders, setOrders, accTab, setAccTab,
     setCart, setIsCartOpen
   } = useAppContext();
 
@@ -81,6 +81,27 @@ export function AuthProfile() {
     saveSessionState(null);
     closeAuth();
     showToast('👋 Logged out successfully!');
+  };
+
+  const handleCancelOrder = (orderId: string) => {
+    if (!currentUser) return;
+    const allOrders = getOrders(currentUser.email);
+    const orderIndex = allOrders.findIndex((o: any) => o.id === orderId);
+    if (orderIndex >= 0 && allOrders[orderIndex].status === 'pending') {
+      const timeElapsed = Date.now() - (allOrders[orderIndex].timestamp || 0);
+      if (timeElapsed > 15000) {
+        showToast('⚠️ Cannot cancel, order is already being processed.');
+        return;
+      }
+      if (confirm('Are you sure you want to cancel this order?')) {
+        allOrders[orderIndex].status = 'cancelled';
+        setOrders(currentUser.email, allOrders);
+        setOrderDetailId(null);
+        showToast('🚫 Order cancelled successfully!');
+      }
+    } else {
+      showToast('⚠️ Order cannot be cancelled at this stage.');
+    }
   };
 
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -307,7 +328,9 @@ export function AuthProfile() {
                       <div key={o.id} className="order-item" onClick={() => setOrderDetailId(o.id)}>
                         <div className="order-item-header">
                           <div className="order-item-id">#{o.id}</div>
-                          <span className={`order-status-chip status-${o.status}`}>{o.status === 'confirmed' ? '✓ Confirmed' : '⏳ Pending'}</span>
+                          <span className={`order-status-chip status-${o.status}`}>
+                            {o.status === 'confirmed' ? '✓ Confirmed' : o.status === 'out_for_delivery' ? '🛵 Out for Delivery' : o.status === 'delivered' ? '🎉 Delivered' : o.status === 'cancelled' ? '🚫 Cancelled' : '⏳ Pending'}
+                          </span>
                         </div>
                         <div className="order-item-date">{o.date}</div>
                         <div className="order-item-summary">{o.items.map((i: any) => `${i.name}×${i.qty}`).join(', ')}</div>
@@ -390,14 +413,46 @@ export function AuthProfile() {
               <div className="detail-section">
                 <div className="detail-section-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Calendar size={13} /> Order Info</div>
                 <div className="detail-row"><span>Date</span><span>{selectedOrder.date}</span></div>
-                <div className="detail-row"><span>Status</span><span className={`order-status-chip status-${selectedOrder.status}`}>{selectedOrder.status === 'confirmed' ? '✓ Confirmed' : '⏳ Pending'}</span></div>
+                <div className="detail-row">
+                  <span>Status</span>
+                  <span className={`order-status-chip status-${selectedOrder.status}`}>
+                    {selectedOrder.status === 'confirmed' ? '✓ Confirmed' : selectedOrder.status === 'out_for_delivery' ? '🛵 Out for Delivery' : selectedOrder.status === 'delivered' ? '🎉 Delivered' : selectedOrder.status === 'cancelled' ? '🚫 Cancelled' : '⏳ Pending'}
+                  </span>
+                </div>
+                
+                {selectedOrder.status !== 'cancelled' && (
+                  <div className="order-tracker">
+                    <div className={`track-step ${['pending', 'confirmed', 'out_for_delivery', 'delivered'].includes(selectedOrder.status) ? 'active' : ''}`}>
+                      1<div className="track-label">Pending</div>
+                    </div>
+                    <div className={`track-line ${['confirmed', 'out_for_delivery', 'delivered'].includes(selectedOrder.status) ? 'active' : ''}`}></div>
+                    <div className={`track-step ${['confirmed', 'out_for_delivery', 'delivered'].includes(selectedOrder.status) ? 'active' : ''}`}>
+                      2<div className="track-label">Confirmed</div>
+                    </div>
+                    <div className={`track-line ${['out_for_delivery', 'delivered'].includes(selectedOrder.status) ? 'active' : ''}`}></div>
+                    <div className={`track-step ${['out_for_delivery', 'delivered'].includes(selectedOrder.status) ? 'active' : ''}`}>
+                      3<div className="track-label">Out for Del.</div>
+                    </div>
+                    <div className={`track-line ${['delivered'].includes(selectedOrder.status) ? 'active' : ''}`}></div>
+                    <div className={`track-step ${['delivered'].includes(selectedOrder.status) ? 'active' : ''}`}>
+                      4<div className="track-label">Delivered</div>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="detail-section">
+              <div className="detail-section" style={{ background: '#fff', border: '1px dashed rgba(30,35,50,0.3)' }}>
                 <div className="detail-section-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><ShoppingBag size={13} /> Items Ordered</div>
-                {selectedOrder.items.map((i: any) => (
-                  <div key={i.id} className="detail-row"><span>{i.name} ×{i.qty}</span><span>৳{i.price * i.qty}</span></div>
-                ))}
-                <div className="detail-row"><span>Subtotal</span><span>৳{selectedOrder.total - DELIVERY_CHARGE}</span></div>
+                <div style={{ marginBottom: '12px' }}>
+                  {selectedOrder.items.map((i: any) => (
+                    <div key={i.id} className="receipt-item">
+                      <div className="receipt-item-name">
+                        <span className="receipt-item-qty">{i.qty}x</span> {i.name}
+                      </div>
+                      <span>৳{i.price * i.qty}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="detail-row" style={{ marginTop: '12px' }}><span>Subtotal</span><span>৳{selectedOrder.total - DELIVERY_CHARGE}</span></div>
                 <div className="detail-row"><span>Delivery Charge</span><span>৳{DELIVERY_CHARGE}</span></div>
                 <div className="detail-row total-row"><span>Total</span><span>৳{selectedOrder.total}</span></div>
               </div>
@@ -428,6 +483,15 @@ export function AuthProfile() {
               >
                 <RotateCcw size={14} /> Reorder Again
               </button>
+              {selectedOrder.status === 'pending' && (Date.now() - (selectedOrder.timestamp || 0) < 15000) && (
+                <button 
+                  className="section-logout-btn" 
+                  style={{ background: 'var(--orange)', color: '#1a1d25', borderColor: '#e5af51', marginTop: '10px', fontWeight: 900, boxShadow: '0 4px 14px rgba(255,195,90,0.4)', textTransform: 'uppercase', letterSpacing: '0.5px' }}
+                  onClick={() => handleCancelOrder(selectedOrder.id)}
+                >
+                  ✕ CANCEL THIS ORDER
+                </button>
+              )}
             </div>
           )}
         </div>

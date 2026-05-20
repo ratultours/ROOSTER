@@ -41,6 +41,14 @@ export function CartAndCheckout() {
         address: u?.address || '',
         note: ''
       });
+    } else {
+      setCheckoutForm({
+        name: '',
+        email: '',
+        phone: '',
+        address: '',
+        note: ''
+      });
     }
     setIsCheckoutOpen(true);
   };
@@ -62,7 +70,9 @@ export function CartAndCheckout() {
     const dateStr = now.toLocaleDateString('en-BD', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     const order = {
       id: orderId, date: dateStr, status: 'pending', items: orderItems, total,
-      customer: { name, phone, email, address, note }
+      timestamp: Date.now(),
+      customer: { name, phone, email, address, note },
+      isGuest: !currentUser
     };
 
     if (currentUser) {
@@ -74,6 +84,19 @@ export function CartAndCheckout() {
       stats.items += totalQty;
       stats.spent += total;
       setStats(currentUser.email, stats);
+
+      const u = users[currentUser.email];
+      if (u && (!u.address || u.address.trim() !== address.trim())) {
+        const newUsers = { ...users };
+        newUsers[currentUser.email] = { ...u, address: address.trim() };
+        saveUsersState(newUsers);
+        showToast('📍 Delivery address saved as default!');
+      }
+    } else {
+      // Capture guest order globally
+      const allGuestOrders = JSON.parse(localStorage.getItem('rooster_guest_orders') || '[]');
+      allGuestOrders.push(order);
+      localStorage.setItem('rooster_guest_orders', JSON.stringify(allGuestOrders));
     }
 
     setSuccessOrderId(orderId);
@@ -101,8 +124,18 @@ export function CartAndCheckout() {
       <div className={`cart-drawer ${isCartOpen ? 'open' : ''}`}>
         <div className="cart-handle"></div>
         <div className="cart-header">
-          <div className="cart-title">
-            <ShoppingBag size={22} color="#22a44e" strokeWidth={2.2} /> YOUR CART
+          <div className="cart-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingRight: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <ShoppingBag size={22} color="#22a44e" strokeWidth={2.2} /> YOUR CART
+            </div>
+            {totalQty > 0 && (
+              <button 
+                onClick={() => setCart({})} 
+                style={{ fontSize: '11px', fontWeight: 800, color: '#c0150a', background: 'rgba(232,35,10,0.1)', border: '1px solid rgba(232,35,10,0.2)', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                ✕ CLEAR CART
+              </button>
+            )}
           </div>
           <button className="cart-close" onClick={() => setIsCartOpen(false)}>✕</button>
         </div>
@@ -148,8 +181,13 @@ export function CartAndCheckout() {
       </div>
 
       <div className={`modal-overlay ${isCheckoutOpen ? 'open' : ''}`}>
-        <div className="modal">
-          <div className="modal-title">📦 Checkout</div>
+        <div className="modal" style={{ paddingTop: currentUser ? '24px' : '16px' }}>
+          {!currentUser && (
+            <div style={{ background: 'rgba(212,168,0,0.1)', border: '1px solid rgba(212,168,0,0.3)', color: '#8a6a00', padding: '10px 14px', borderRadius: '6px', fontSize: '13px', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>ℹ️</span> Checking out as a guest. To view order history, log in first.
+            </div>
+          )}
+          <div className="modal-title">📦 {currentUser ? 'Checkout' : 'Guest Checkout'}</div>
           <div className="form-group"><label className="form-label">Full Name</label><input className="form-input" type="text" placeholder="Enter your full name" autoComplete="name" value={checkoutForm.name} onChange={e => setCheckoutForm({...checkoutForm, name: e.target.value})} /></div>
           <div className="form-group"><label className="form-label">Phone Number</label><input className="form-input" type="tel" placeholder="01XXXXXXXXX" autoComplete="tel" value={checkoutForm.phone} onChange={e => setCheckoutForm({...checkoutForm, phone: e.target.value})} /></div>
           <div className="form-group"><label className="form-label">Email <span style={{fontWeight:500, color:"rgba(30,35,50,0.4)", fontSize:"11px", textTransform:"none", letterSpacing:0}}>(Optional)</span></label><input className="form-input" type="email" placeholder="example@email.com" autoComplete="email" value={checkoutForm.email} onChange={e => setCheckoutForm({...checkoutForm, email: e.target.value})} /></div>

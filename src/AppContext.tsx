@@ -52,9 +52,50 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return () => { document.body.style.overflow = ''; };
   }, [isCartOpen, isAuthOpen, isCheckoutOpen, isSuccessOpen]);
 
+  useEffect(() => {
+    if (!currentUser) return;
+    const interval = setInterval(() => {
+      const orders = getOrders(currentUser.email);
+      let changed = false;
+      const now = Date.now();
+      
+      const newOrders = orders.map((o: any) => {
+        if (!o.timestamp) return o;
+        const elapsed = now - o.timestamp;
+        let newStatus = o.status;
+        let notifyMsg = null;
+        
+        if (o.status === 'pending' && elapsed > 15000) {
+           newStatus = 'confirmed';
+           notifyMsg = `Order #${o.id} is Confirmed!`;
+        } else if (o.status === 'confirmed' && elapsed > 30000) {
+           newStatus = 'out_for_delivery';
+           notifyMsg = `Order #${o.id} is Out for delivery! 🛵`;
+        } else if (o.status === 'out_for_delivery' && elapsed > 45000) {
+           newStatus = 'delivered';
+           notifyMsg = `Order #${o.id} has been Delivered! 🎉`;
+        }
+        
+        if (newStatus !== o.status) {
+          changed = true;
+          if (notifyMsg) showToast(notifyMsg);
+          return { ...o, status: newStatus };
+        }
+        return o;
+      });
+      
+      if (changed) {
+        setOrders(currentUser.email, newOrders);
+        // Force state update to re-render AuthProfile if open
+        setUsers({ ...users });
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [currentUser, users]);
+
   const showToast = (msg: string) => {
     setToast({ show: true, msg });
-    setTimeout(() => setToast({ show: false, msg: '' }), 2800);
+    setTimeout(() => setToast({ show: false, msg: '' }), 4000);
   };
 
   const saveUsersState = (newUsers: any) => {
